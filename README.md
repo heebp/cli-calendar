@@ -1,5 +1,5 @@
 # cli-calendar
 command line interface calendar with C
 
-#install
+# install
 gcc ./calendar.c ./linkedlist.c

@@ -3,29 +3,16 @@
 
 int month[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
 
-void    initCalendar(t_calendar_info* now_info);
-t_menu  printCalendar(t_calendar_info* now_info);
-int     isLeapYear(int year);
-void    setFebruary(int year);
-void    SearchByDate(t_calendar_info* calendar);
-t_menu  printCRUD();
-void    printSelectDayCommand();
-void    moveCalendar(char* command, t_calendar_info* now_info);
-void    setNextMonth(t_calendar_info* calendar);
-void    setPrevMonth(t_calendar_info* calendar);
-t_date* addDate(t_calendar_info* calendar);
-void    newMemo(t_date* date);
-
-
 int   main(void)
 {
   t_calendar_info now_info;
   t_menu          menu;
+  t_date*         selected = NULL;
   
   initList();
   loadListFromFile();
   initCalendar(&now_info);
-  while ((menu = printCalendar(&now_info)) != 0)
+  while ((menu = printUI(&now_info)) != EXIT)
   {
     switch (menu)
     {
@@ -38,13 +25,24 @@ int   main(void)
       break;
 
     case SELECT_DATE:
-      SearchByDate(&now_info);
+      if ((selected = getDate(&now_info)) == NULL)
+        continue;
+      selectByDate(selected);
+      break;
+
+    case PRINT_ALL:
+      printAll();
+	    printf("계속하시려면 아무키나 눌러주세요.");
+      fflush(stdin);
+      getchar();
       break;
 
     default:
       break;
     }
   }
+  releaseList();
+  return (0);
 }
 
 void  initCalendar(t_calendar_info* select_date)
@@ -58,33 +56,11 @@ void  initCalendar(t_calendar_info* select_date)
   now_time.tm_mday = 1;
   mktime(&now_time);
   select_date->month_wday = now_time.tm_wday;
-  printf("\n%d , %d, %d\n", select_date->month_wday, now_time.tm_mday, now_time.tm_wday);
   setFebruary(select_date->year);
 }
-
-
-int   isLeapYear(int year)
+void   printCalendar(t_calendar_info* now_info, char* input)
 {
-  if((year % 4 == 0) && (year % 100 != 0) || (year % 400 == 0))
-    return 1;
-  else
-    return 0;
-}
-
-void  setFebruary(int year)
-{
-  if (isLeapYear(year))
-    month[1] = 29;
-  else
-    month[1] = 28;
-}
-
-t_menu  printCalendar(t_calendar_info* now_info)
-{
-  char  input[10];
-  int   num;
-
-  printf("%d년 %d월\n", now_info->year, now_info->month_index + 1);
+  printf("\n--------------------%d년 %d월--------------------\n\n", now_info->year, now_info->month_index + 1);
   printf("일\t월\t화\t수\t목\t금\t토\n");
   for (int i = 0; i < (now_info->month_wday % 7 ); i++)
     printf(" \t");
@@ -96,29 +72,51 @@ t_menu  printCalendar(t_calendar_info* now_info)
   }
   printf("\n\n");
 
-  printf("날짜를 입력해주세요 \n(다음 달로 이동 : Next/N/n ) (저번 달로 이동 : Prev/P/p ) (종료: 0)\n입력 : ");
+  printf("메모를 쓸 날짜를 입력해주세요. (1 ~ %d)\n(저번 달로 이동 : Prev/P/p )\t(다음 달로 이동 : Next/N/n ) \n(모든 메모 조회 : all/a)\t(종료: 0)\n입력 : "
+          , month[now_info->month_index]);
+  fflush(stdin);
 	scanf("%s", input);
-  if (strcmp(input,"Next") == 0 || strcmp(input,"N") == 0 || strcmp(input,"n") == 0)
+}
+
+t_menu  printUI(t_calendar_info* now_info)
+{
+  int   num = -1;
+  char  input[10];
+  printCalendar(now_info, input);
+
+  if (strcmp(input,"0") == 0)
+    return (EXIT);
+  if (strcmp(input,"Next") == 0 ||
+      strcmp(input,"N") == 0 || 
+      strcmp(input,"n") == 0)
     return (MOVE_NEXT_MONTH);
-  else if(strcmp(input,"Prev") == 0 || strcmp(input,"P") == 0 || strcmp(input,"p") == 0)
+  if (strcmp(input,"Prev") == 0 || 
+            strcmp(input,"P") == 0 || 
+            strcmp(input,"p") == 0)
     return (MOVE_PREV_MONTH);
-  else if ((num = atoi(input)) > 0  && num <= month[now_info->month_index])
+  if (strcmp(input,"all") == 0 ||
+            strcmp(input,"a") == 0)
+    return (PRINT_ALL);
+  if ((num = atoi(input)) > 0  && 
+      num <= month[now_info->month_index])
   {
     now_info->day = num;
     return (SELECT_DATE);
   }
-  return -1;
+  return (CONTINUE);
 }
 
-void  SearchByDate(t_calendar_info* calendar)
+t_date* getDate(t_calendar_info* calendar)
 {
-  t_menu  menu;
   char    date[11];
-  int     num;
-  sprintf(date, "%d-%d-%d",calendar->year, calendar->month_index + 1, calendar->day);
   t_date* selected = NULL;
-  // selected = calloc(1, sizeof(t_date));
-  if ((selected = searchDateNode(selected, date)) == NULL)
+  sprintf(date, "%04d-%02d-%02d",calendar->year, calendar->month_index + 1, calendar->day);
+  if ((selected = searchDateNode(date)) != NULL)
+  {
+    printMemoByDate(selected);
+    return selected;
+  }
+  else
   {
     printf("해당하는 날짜에 메모가 없습니다.\n새로운 메모를 등록하시겠습니까?(y/n):\n");
     fflush(stdin);
@@ -127,16 +125,19 @@ void  SearchByDate(t_calendar_info* calendar)
     {
       selected = addDate(calendar);
       newMemo(selected);
+      saveListToFile();
+      printMemoByDate(selected);
+      return (selected);
     }
-    return;
+    return (NULL);
   }
-  else
-  {
-    printf("%s, %s\n", selected->date, selected->memo);
-    printf("%p, %p\n", selected, selected->memo);
-    printAllMemo(selected);
-  }
-  while ((menu = printCRUD()) != 0)
+}
+
+void  selectByDate(t_date* selected)
+{
+  t_menu  menu;
+  int     num;
+  while ((menu = printCRUD()) != EXIT)
   {
     switch (menu)
     {
@@ -148,20 +149,27 @@ void  SearchByDate(t_calendar_info* calendar)
       break;
 
     case REGISTER:
-        newMemo(selected);
+      newMemo(selected);
+      saveListToFile();
       break;
 
     case MODIFY:
       printf("변경하고 싶은 메모번호를 입력하세요 : ");
       scanf("%d", &num);
       printf("수정 내용을 입력하세요.");
-      char  content[50];
-      scanf("%s", &content);
-      modifyMemoByNum(selected, content, num);
+      char  content[MEMO_SIZE];
+      scanf(" %[^\n]", &content);
+      if(modifyMemoByNum(selected, content, num))
+      {
+        printf("성공적으로 수정되었습니다.\n");
+        saveListToFile();
+      }
+      else
+        printf("실패하였습니다.\n");
       break;
 
     case REMOVE:
-      printf("메모를 선택하세요");
+      printf("메모를 선택하세요: ");
       scanf("%d", &num);
       int condition = removeMemoByNum(selected, num);
       if (condition == 2)
@@ -170,9 +178,12 @@ void  SearchByDate(t_calendar_info* calendar)
         return;
       }
       else if (condition == 1)
-        printf("성공적으로 삭제하였습니다.");
+      {
+        printf("성공적으로 삭제하였습니다.\n");
+        saveListToFile();
+      }
       else
-        printf("삭제되지 않았습니다.");
+        printf("삭제되지 않았습니다.\n");
       break;
 
     case SAVE:
@@ -189,9 +200,18 @@ t_menu  printCRUD()
 {
   t_menu  menu;
 
-  printf("1) 조회\t\t2) 등록\n3) 변경\t\t4) 삭제 8) 저장 0) 이전으로\n명령어를 입력해주세요 : ");
+  printf("1) 조회\t\t2) 등록\n3) 변경\t\t4) 삭제 0) 이전으로\n명령어를 입력해주세요 : ");
   scanf("%d", &menu);
-  return menu;
+  if (menu == 1)
+    return PRINT;
+  if (menu == 2)
+    return REGISTER;
+  if (menu == 3)
+    return MODIFY;
+  if (menu == 4)
+    return REMOVE;
+  if (menu == 0)
+    return EXIT;
 }
 
 void  setNextMonth(t_calendar_info* calendar)
@@ -222,13 +242,13 @@ void  setPrevMonth(t_calendar_info* calendar)
 
 void  writeMemo(char* date, char* memo)
 {
-  printf("선택날짜:%s\n메모를 입력해주세요", date);
-  scanf("%s", memo);
+  printf("선택날짜:%s\n메모를 입력해주세요: ", date);
+  scanf(" %[^\n]", memo);
 }
 
 void  newMemo(t_date* date)
 {
-  char  memo[50];
+  char  memo[MEMO_SIZE];
   writeMemo(date->date, memo);
   t_memo* pHead = date->memo;
   addMemoNewNode(&pHead, date, memo);
@@ -237,10 +257,26 @@ void  newMemo(t_date* date)
 t_date*  addDate(t_calendar_info* calendar)
 {
   char  date[11];
-  sprintf(date, "%d-%d-%d",calendar->year, calendar->month_index + 1, calendar->day);
+  sprintf(date, "%04d-%02d-%02d",calendar->year, calendar->month_index + 1, calendar->day);
   t_date* newDate;
   newDate = addDateNewNode(date);
-  return newDate;
+  return (newDate);
+}
+
+int   isLeapYear(int year)
+{
+  if((year % 4 == 0) && (year % 100 != 0) || (year % 400 == 0))
+    return (1);
+  else
+    return (0);
+}
+
+void  setFebruary(int year)
+{
+  if (isLeapYear(year))
+    month[1] = 29;
+  else
+    month[1] = 28;
 }
 
  

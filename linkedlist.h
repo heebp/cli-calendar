@@ -20,12 +20,13 @@ typedef struct  s_date
   struct s_date*  pPrev;
 } t_date;
 
-void    initList(void);
+void    init(void);
 void    releaseList(void);
 t_date* addDateNewNode(char* date);
 void    addMemoNewNode(t_memo** pHead, t_date* date, char* content);
 void    printMemoByDate(t_date* date);
 void    printMemoByNum(t_date* date, int num);
+void    getExistence(char* date, int* existenceDay);
 t_date* searchDateNode(char* date);
 int     modifyMemoByNum(t_date* date, char* content, int num);
 int     removeMemoByNum(t_date* date, int num);

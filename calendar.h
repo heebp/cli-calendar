@@ -26,7 +26,7 @@ typedef enum    s_menu
 
 void    initCalendar(t_calendar_info* now_info);
 t_menu  printUI(t_calendar_info* now_info);
-void    printCalendar(t_calendar_info* now_info, char* input);
+void    printCalendar(t_calendar_info* now_info);
 int     isLeapYear(int year);
 void    setFebruary(int year);
 t_date* getDate(t_calendar_info* calendar);

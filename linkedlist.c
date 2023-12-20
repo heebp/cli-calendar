@@ -4,7 +4,7 @@ t_date    date_HeadNode = { 0, };
 t_date    date_TailNode = { 0, };
 char 			FILE_NAME[10] = "memo.dat";
 
-void	initList(void)
+void	init(void)
 {
 	releaseList();
 	date_HeadNode.pNext = &date_TailNode;
@@ -31,14 +31,12 @@ void	releaseList(void)
 		t_memo *memoTmp = pTmp->memo;
 		while (memoTmp != NULL)
 		{
-			// printf("Delete: %s\n",memoTmp->data);
 			free(memoTmp);
 			memoTmp = memoTmp->pNext;
 		}
 		pDelete = pTmp;
 		pTmp = pTmp->pNext;
 
-		// printf("Delete: %s, %s\n",pDelete->date, pDelete->memo);
 		free(pDelete);
 	}
 
@@ -46,6 +44,20 @@ void	releaseList(void)
 	date_TailNode.pPrev = &date_HeadNode;
 }
 
+void	getExistence(char* date, int* existenceDay)
+{
+	int	day;
+	t_date* pTmp = date_HeadNode.pNext;
+	while (pTmp != &date_TailNode)
+	{
+		if (strncmp(pTmp->date, date, 7) == 0)
+		{
+			sscanf(pTmp->date + 8, "%d", &day);
+			existenceDay[day] = 1;
+		}
+		pTmp = pTmp->pNext;
+	}
+}
 
 t_date*	searchDateNode(char* date)
 {
@@ -127,14 +139,7 @@ int		saveListToFile(void)
 	fclose(fp);
 	return 1;
 }
-int		appendListToFile(char* date)
-{
-	FILE* fp = NULL;
-	fopen(&fp, FILE_NAME, "ab");
-	t_date* pCur = searchDateNode(date);
-	
 
-}
 void	printMemoByDate(t_date* date)
 {
   printf("\n-----------%s 메모 목록-----------\n\n", date);
@@ -317,5 +322,6 @@ void	printAll(void)
 		printf("%d번.",++i);
 		printMemoByDate(dateTmp);
 		dateTmp = dateTmp->pNext;
-	}	
+	}
+	printf("\n총 %d개 조회\n\n", i);
 }
